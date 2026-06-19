@@ -6,6 +6,7 @@ import os
 
 st.set_page_config(page_title="AI CHẨN ĐOÁN BỆNH CÂY TRỒNG", layout="centered")
 
+# --- CÁC HÀM CƠ BẢN ---
 @st.cache_resource
 def get_class_names():
     path = "dataset"
@@ -19,29 +20,35 @@ def load_tflite_model():
     interpreter.allocate_tensors()
     return interpreter
 
-st.title("🌾 AI CHẨN ĐOÁN BỆNH CÂY TRỒNG")
+st.title("🌾 AI CHẨN ĐOÁN BỆNH CÂY TRỒNG BẰNG HÌNH ẢNH")
 interpreter = load_tflite_model()
-input_details = interpreter.get_input_details()
-output_details = interpreter.get_output_details()
 class_names = get_class_names()
 
-# Sử dụng tabs để người dùng tự chọn cách nhập ảnh
-tab1, tab2 = st.tabs(["📸 Chụp ảnh trực tiếp", "📁 Tải ảnh có sẵn"])
+# --- GIAO DIỆN CHỌN ---
+option = st.radio("Chọn phương thức nhập ảnh:", ["Tải ảnh có sẵn", "Chụp ảnh trực tiếp"])
 
 image_to_process = None
 
-with tab1:
-    st.write("Nhấn nút bên dưới để mở camera:")
-    captured_image = st.camera_input("Chụp ảnh")
-    if captured_image is not None:
-        image_to_process = Image.open(captured_image)
-
-with tab2:
+if option == "Tải ảnh có sẵn":
     uploaded_file = st.file_uploader("Chọn ảnh từ thiết bị:", type=["jpg", "jpeg", "png"])
     if uploaded_file is not None:
         image_to_process = Image.open(uploaded_file)
 
-# Xử lý ảnh
+elif option == "Chụp ảnh trực tiếp":
+    # Dùng session_state để quản lý việc có hiển thị camera hay không
+    if 'show_camera' not in st.session_state:
+        st.session_state.show_camera = False
+    
+    if st.button("Mở Camera"):
+        st.session_state.show_camera = True
+        
+    if st.session_state.show_camera:
+        captured_image = st.camera_input("Chụp ảnh")
+        if captured_image is not None:
+            image_to_process = Image.open(captured_image)
+            st.session_state.show_camera = False # Ẩn camera sau khi chụp xong
+
+# --- XỬ LÝ ẢNH ---
 if image_to_process is not None:
     st.image(image_to_process, caption='Ảnh đang xử lý...', use_column_width=True)
     
@@ -50,6 +57,8 @@ if image_to_process is not None:
         img_array = np.array(img, dtype=np.float32) / 255.0
         img_array = np.expand_dims(img_array, axis=0)
         
+        input_details = interpreter.get_input_details()
+        output_details = interpreter.get_output_details()
         interpreter.set_tensor(input_details[0]['index'], img_array)
         interpreter.invoke()
         prediction = interpreter.get_tensor(output_details[0]['index'])
@@ -57,10 +66,8 @@ if image_to_process is not None:
         index_max = np.argmax(prediction)
         do_tin_cay = np.max(prediction) * 100
         
-        # Kiểm tra ngưỡng tin cậy 99%
         if do_tin_cay >= 99.0:
             st.success(f"Kết quả dự đoán: **{class_names[index_max]}**")
-            st.write(f"Độ tin cậy: {do_tin_cay:.2f}%")
         else:
-            st.warning(f"Kết quả dự đoán: **{class_names[index_max]}**")
-            st.info(f"Độ tin cậy chỉ đạt {do_tin_cay:.2f}%. Hãy chụp ảnh rõ nét hơn (cần >= 99%).")
+            st.warning(f"Kết quả dự đoán: **{class_names[index_max]}** ({do_tin_cay:.2f}%)")
+            st.info("Độ tin cậy thấp, hãy chụp lại ảnh rõ nét hơn.")
