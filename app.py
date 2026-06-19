@@ -14,13 +14,13 @@ def load_tflite_model():
     return interpreter
 
 st.title("🌾 AI CHẨN ĐOÁN BỆNH CÂY TRỒNG")
-st.write("Hãy tải ảnh  cây trồng cần kiểm tra lên:")
+st.write("Hãy tải ảnh cây trồng cần kiểm tra lên:")
 
 interpreter = load_tflite_model()
 input_details = interpreter.get_input_details()
 output_details = interpreter.get_output_details()
 
-uploaded_file = st.file_uploader("Chọn ảnh lá cây trồng...", type=["jpg", "jpeg", "png"])
+uploaded_file = st.file_uploader("Chọn ảnh bệnh cây trồng...", type=["jpg", "jpeg", "png"])
 
 if uploaded_file is not None:
     image = Image.open(uploaded_file)
