@@ -4,13 +4,13 @@ import tensorflow as tf
 from PIL import Image
 import os
 
-st.set_page_config(page_title="AI CHẨN ĐOÁN BỆNH CÂY TRỒNG", layout="centered")
+st.set_page_config(page_title="AI CHẨN ĐOÁN BỆNH CÂY TRỒNG BẰNG HÌNH ẢNH", layout="centered")
 
-# --- HÀM CƠ BẢN ---
+# --- HÀM XỬ LÝ ---
 @st.cache_resource
 def get_class_names():
     path = "dataset"
-    if not os.path.exists(path): return ["Dữ liệu chưa sẵn sàng"]
+    if not os.path.exists(path): return []
     folders = sorted([f for f in os.listdir(path) if os.path.isdir(os.path.join(path, f))])
     return [name.replace('_', ' ').capitalize() for name in folders]
 
@@ -24,31 +24,30 @@ st.title("🌾 AI CHẨN ĐOÁN BỆNH CÂY TRỒNG BẰNG HÌNH ẢNH")
 interpreter = load_tflite_model()
 class_names = get_class_names()
 
-# --- GIAO DIỆN ---
-choice = st.radio("Chọn phương thức:", ["Tải ảnh có sẵn", "Chụp ảnh trực tiếp"])
+# --- GIAO DIỆN SẴN ---
+col1, col2 = st.columns(2)
 
 image_to_process = None
 
-if choice == "Tải ảnh có sẵn":
-    uploaded_file = st.file_uploader("Chọn ảnh:", type=["jpg", "jpeg", "png"])
-    if uploaded_file:
-        image_to_process = Image.open(uploaded_file)
+with col1:
+    uploaded_file = st.file_uploader("📁 Tải ảnh có sẵn", type=["jpg", "jpeg", "png"])
+    if uploaded_file: image_to_process = Image.open(uploaded_file)
 
-elif choice == "Chụp ảnh trực tiếp":
-    # Nút này chỉ dùng để hiển thị nút chụp (Camera)
-    if st.button("Hiện nút chụp ảnh"):
-        st.session_state.open_cam = True
+with col2:
+    # Nút "Chụp" chỉ hiện camera khi nhấn
+    if st.button("📸 Chụp ảnh trực tiếp"):
+        st.session_state.show_cam = True
     
-    if st.session_state.get('open_cam', False):
-        captured_image = st.camera_input("Nhấn nút chụp bên dưới:")
+    if st.session_state.get('show_cam', False):
+        captured_image = st.camera_input("Chụp ảnh")
         if captured_image:
             image_to_process = Image.open(captured_image)
-            st.session_state.open_cam = False # Tắt nút chụp sau khi chụp xong
+            st.session_state.show_cam = False
 
-# --- XỬ LÝ AI ---
+# --- XỬ LÝ TỰ ĐỘNG ---
 if image_to_process:
     st.image(image_to_process, use_column_width=True)
-    with st.spinner("Đang phân tích..."):
+    with st.spinner("AI đang phân tích..."):
         img = image_to_process.resize((224, 224))
         img_array = np.array(img, dtype=np.float32) / 255.0
         img_array = np.expand_dims(img_array, axis=0)
