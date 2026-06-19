@@ -14,7 +14,7 @@ def load_tflite_model():
     return interpreter
 
 st.title("🌾 AI CHẨN ĐOÁN BỆNH CÂY TRỒNG")
-st.write("Hãy tải ảnh lá cây trồng cần kiểm tra lên:")
+st.write("Hãy tải ảnh  cây trồng cần kiểm tra lên:")
 
 interpreter = load_tflite_model()
 input_details = interpreter.get_input_details()
