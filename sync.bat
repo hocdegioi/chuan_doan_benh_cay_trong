@@ -1,4 +1,5 @@
 @echo off
+git add model_cay_trong_final.tflite
 echo Dang day code len GitHub...
 git add .
 git commit -m "Cap nhat code moi nhat"
