@@ -4,16 +4,20 @@ import tensorflow as tf
 from PIL import Image
 import os
 
-st.set_page_config(page_title="AI CHẨN ĐOÁN BỆNH CÂY TRỒNG")
+# Cấu hình trang
+st.set_page_config(page_title="AI CHẨN ĐOÁN BỆNH CÂY TRỒNG", layout="centered")
 
-# Hàm tự động lấy danh sách bệnh dựa trên thư mục
+# Hàm tự động lấy danh sách bệnh (quét thư mục dataset)
 @st.cache_resource
 def get_class_names():
-    # Lấy danh sách thư mục trong folder dataset và sắp xếp theo bảng chữ cái
-    folders = sorted([f for f in os.listdir("dataset") if os.path.isdir(os.path.join("dataset", f))])
-    # Tự động thay thế dấu gạch dưới bằng khoảng trắng để hiển thị đẹp hơn
+    # Lấy danh sách thư mục trong folder 'dataset'
+    path = "dataset"
+    if not os.path.exists(path):
+        return ["Chưa có dữ liệu"]
+    folders = sorted([f for f in os.listdir(path) if os.path.isdir(os.path.join(path, f))])
     return [name.replace('_', ' ').capitalize() for name in folders]
 
+# Load model TFLite
 @st.cache_resource
 def load_tflite_model():
     interpreter = tf.lite.Interpreter(model_path="model_cay_trong_final.tflite")
@@ -21,35 +25,39 @@ def load_tflite_model():
     return interpreter
 
 st.title("🌾 AI CHẨN ĐOÁN BỆNH CÂY TRỒNG")
-st.write("hệ thống chuẩn đoán bệnh bằng chụp ảnh .")
 
+# Load model và danh sách bệnh
 interpreter = load_tflite_model()
-class_names = get_class_names() # Lấy danh sách bệnh tự động
+input_details = interpreter.get_input_details()
+output_details = interpreter.get_output_details()
+class_names = get_class_names()
 
-uploaded_file = st.file_uploader("Chọn ảnh bệnh cây trồng...", type=["jpg", "jpeg", "png"])
+# Giao diện camera cho điện thoại
+captured_image = st.camera_input("Chụp ảnh bệnh cây cần kiểm tra:")
 
-if uploaded_file is not None:
-    image = Image.open(uploaded_file)
-    st.image(image, caption='Ảnh đã chọn.', use_column_width=True)
+if captured_image is not None:
+    # Mở ảnh
+    image = Image.open(captured_image)
+    st.image(image, caption='Ảnh vừa chụp.', use_column_width=True)
     
-    if st.button("Phân tích bệnh"):
+    # Xử lý phân tích ngay lập tức
+    with st.spinner("Đang AI phân tích..."):
         img = image.resize((224, 224))
         img_array = np.array(img, dtype=np.float32) / 255.0
         img_array = np.expand_dims(img_array, axis=0)
-        
-        input_details = interpreter.get_input_details()
-        output_details = interpreter.get_output_details()
         
         interpreter.set_tensor(input_details[0]['index'], img_array)
         interpreter.invoke()
         prediction = interpreter.get_tensor(output_details[0]['index'])
         
-        # Tìm chỉ số cao nhất
+        # Lấy kết quả
         index_max = np.argmax(prediction)
         
-        # Kiểm tra xem index có nằm trong danh sách không
         if index_max < len(class_names):
             ten_benh = class_names[index_max]
-            st.success(f"Kết quả phân tích: **{ten_benh}**")
+            do_tin_cay = np.max(prediction) * 100
+            
+            st.success(f"Kết quả dự đoán: **{ten_benh}**")
+            st.write(f"Độ tin cậy của AI: {do_tin_cay:.2f}%")
         else:
-            st.error("Model trả về kết quả không khớp với danh sách thư mục!")
+            st.error("Model trả về kết quả không khớp với dữ liệu!")
