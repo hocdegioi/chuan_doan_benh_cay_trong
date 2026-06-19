@@ -4,9 +4,9 @@ import tensorflow as tf
 from PIL import Image
 import os
 
-st.set_page_config(page_title="AI CHẨN ĐOÁN BỆNH CÂY TRỒNG BẰNG HÌNH ẢNH", layout="centered")
+st.set_page_config(page_title="AI CHẨN ĐOÁN BỆNH CÂY TRỒNG", layout="centered")
 
-# --- HÀM XỬ LÝ ---
+# --- HÀM CƠ BẢN ---
 @st.cache_resource
 def get_class_names():
     path = "dataset"
@@ -24,27 +24,27 @@ st.title("🌾 AI CHẨN ĐOÁN BỆNH CÂY TRỒNG BẰNG HÌNH ẢNH")
 interpreter = load_tflite_model()
 class_names = get_class_names()
 
-# --- GIAO DIỆN SẴN ---
+# --- GIAO DIỆN ---
 col1, col2 = st.columns(2)
 
 image_to_process = None
 
 with col1:
-    uploaded_file = st.file_uploader("📁 Tải ảnh có sẵn", type=["jpg", "jpeg", "png"])
+    uploaded_file = st.file_uploader("📁 Tải ảnh", type=["jpg", "jpeg", "png"])
     if uploaded_file: image_to_process = Image.open(uploaded_file)
 
 with col2:
-    # Nút "Chụp" chỉ hiện camera khi nhấn
-    if st.button("📸 Chụp ảnh trực tiếp"):
+    # Nút này chỉ dùng để mở camera, ban đầu không mở camera
+    if st.button("📸 Chụp ảnh"):
         st.session_state.show_cam = True
     
     if st.session_state.get('show_cam', False):
-        captured_image = st.camera_input("Chụp ảnh")
+        captured_image = st.camera_input("Chụp ảnh tại đây")
         if captured_image:
             image_to_process = Image.open(captured_image)
             st.session_state.show_cam = False
 
-# --- XỬ LÝ TỰ ĐỘNG ---
+# --- XỬ LÝ ---
 if image_to_process:
     st.image(image_to_process, use_column_width=True)
     with st.spinner("AI đang phân tích..."):
@@ -59,7 +59,12 @@ if image_to_process:
         idx = np.argmax(prediction)
         conf = np.max(prediction) * 100
         
+        # Hiển thị kết quả
         if conf >= 99.0:
             st.success(f"Kết quả: **{class_names[idx]}**")
         else:
             st.warning(f"Kết quả: **{class_names[idx]}** ({conf:.2f}%). Độ tin cậy thấp!")
+            
+        # Dòng liên hệ mới thêm
+        st.markdown("---")
+        st.write("📞 **Liên hệ 0763114770 để điều trị ngay!**")
