@@ -6,7 +6,7 @@ import os
 
 st.set_page_config(page_title="AI CHẨN ĐOÁN BỆNH CÂY TRỒNG", layout="centered")
 
-# --- CÁC HÀM CƠ BẢN ---
+# --- HÀM CƠ BẢN ---
 @st.cache_resource
 def get_class_names():
     path = "dataset"
@@ -24,50 +24,43 @@ st.title("🌾 AI CHẨN ĐOÁN BỆNH CÂY TRỒNG BẰNG HÌNH ẢNH")
 interpreter = load_tflite_model()
 class_names = get_class_names()
 
-# --- GIAO DIỆN CHỌN ---
-option = st.radio("Chọn phương thức nhập ảnh:", ["Tải ảnh có sẵn", "Chụp ảnh trực tiếp"])
+# --- GIAO DIỆN ---
+choice = st.radio("Chọn phương thức:", ["Tải ảnh có sẵn", "Chụp ảnh trực tiếp"])
 
 image_to_process = None
 
-if option == "Tải ảnh có sẵn":
-    uploaded_file = st.file_uploader("Chọn ảnh từ thiết bị:", type=["jpg", "jpeg", "png"])
-    if uploaded_file is not None:
+if choice == "Tải ảnh có sẵn":
+    uploaded_file = st.file_uploader("Chọn ảnh:", type=["jpg", "jpeg", "png"])
+    if uploaded_file:
         image_to_process = Image.open(uploaded_file)
 
-elif option == "Chụp ảnh trực tiếp":
-    # Dùng session_state để quản lý việc có hiển thị camera hay không
-    if 'show_camera' not in st.session_state:
-        st.session_state.show_camera = False
+elif choice == "Chụp ảnh trực tiếp":
+    # Nút này chỉ dùng để hiển thị nút chụp (Camera)
+    if st.button("Hiện nút chụp ảnh"):
+        st.session_state.open_cam = True
     
-    if st.button("Mở Camera"):
-        st.session_state.show_camera = True
-        
-    if st.session_state.show_camera:
-        captured_image = st.camera_input("Chụp ảnh")
-        if captured_image is not None:
+    if st.session_state.get('open_cam', False):
+        captured_image = st.camera_input("Nhấn nút chụp bên dưới:")
+        if captured_image:
             image_to_process = Image.open(captured_image)
-            st.session_state.show_camera = False # Ẩn camera sau khi chụp xong
+            st.session_state.open_cam = False # Tắt nút chụp sau khi chụp xong
 
-# --- XỬ LÝ ẢNH ---
-if image_to_process is not None:
-    st.image(image_to_process, caption='Ảnh đang xử lý...', use_column_width=True)
-    
-    with st.spinner("AI đang phân tích..."):
+# --- XỬ LÝ AI ---
+if image_to_process:
+    st.image(image_to_process, use_column_width=True)
+    with st.spinner("Đang phân tích..."):
         img = image_to_process.resize((224, 224))
         img_array = np.array(img, dtype=np.float32) / 255.0
         img_array = np.expand_dims(img_array, axis=0)
         
-        input_details = interpreter.get_input_details()
-        output_details = interpreter.get_output_details()
-        interpreter.set_tensor(input_details[0]['index'], img_array)
+        interpreter.set_tensor(interpreter.get_input_details()[0]['index'], img_array)
         interpreter.invoke()
-        prediction = interpreter.get_tensor(output_details[0]['index'])
+        prediction = interpreter.get_tensor(interpreter.get_output_details()[0]['index'])
         
-        index_max = np.argmax(prediction)
-        do_tin_cay = np.max(prediction) * 100
+        idx = np.argmax(prediction)
+        conf = np.max(prediction) * 100
         
-        if do_tin_cay >= 99.0:
-            st.success(f"Kết quả dự đoán: **{class_names[index_max]}**")
+        if conf >= 99.0:
+            st.success(f"Kết quả: **{class_names[idx]}**")
         else:
-            st.warning(f"Kết quả dự đoán: **{class_names[index_max]}** ({do_tin_cay:.2f}%)")
-            st.info("Độ tin cậy thấp, hãy chụp lại ảnh rõ nét hơn.")
+            st.warning(f"Kết quả: **{class_names[idx]}** ({conf:.2f}%). Độ tin cậy thấp!")
