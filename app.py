@@ -4,19 +4,23 @@ import tensorflow as tf
 from PIL import Image
 
 # Cấu hình trang
-st.set_page_config(page_title="AI CHẨN ĐOÁN BỆNH LÚA")
+st.set_page_config(page_title="AI CHẨN ĐOÁN BỆNH CÂY TRỒNG")
 
 @st.cache_resource
 def load_tflite_model():
-    # Load model trực tiếp từ thư mục
+    # Load model trực tiếp từ file .tflite đã nén
     interpreter = tf.lite.Interpreter(model_path="model_cay_trong_final.tflite")
     interpreter.allocate_tensors()
     return interpreter
 
 st.title("🌾 AI CHẨN ĐOÁN BỆNH CÂY TRỒNG")
-interpreter = load_tflite_model()
+st.write("Hãy tải ảnh lá cây trồng cần kiểm tra lên:")
 
-uploaded_file = st.file_uploader("Chọn ảnh lá lúa...", type=["jpg", "jpeg", "png"])
+interpreter = load_tflite_model()
+input_details = interpreter.get_input_details()
+output_details = interpreter.get_output_details()
+
+uploaded_file = st.file_uploader("Chọn ảnh lá cây trồng...", type=["jpg", "jpeg", "png"])
 
 if uploaded_file is not None:
     image = Image.open(uploaded_file)
@@ -29,10 +33,17 @@ if uploaded_file is not None:
         img_array = np.expand_dims(img_array, axis=0)
         
         # Chạy dự đoán
-        input_details = interpreter.get_input_details()
-        output_details = interpreter.get_output_details()
         interpreter.set_tensor(input_details[0]['index'], img_array)
         interpreter.invoke()
         prediction = interpreter.get_tensor(output_details[0]['index'])
         
-        st.success(f"Kết quả phân tích: {prediction}")
+        # DANH SÁCH BỆNH (Bạn hãy thay đổi các tên này cho khớp với dữ liệu bạn đã train)
+        danh_sach_benh = ['Bệnh đạo ôn', 'Bệnh đốm nâu', 'Bệnh bạc lá', 'Bệnh khô vằn', 'Bệnh vàng lá', 'Bệnh lem lép hạt', 'Cây khỏe mạnh', 'Bệnh khác']
+        
+        # Tìm vị trí có xác suất cao nhất
+        index_max = np.argmax(prediction)
+        ten_benh = danh_sach_benh[index_max]
+        do_tin_cay = np.max(prediction) * 100
+        
+        st.success(f"Kết quả phân tích: **{ten_benh}**")
+        st.info(f"Độ tin cậy của AI: {do_tin_cay:.2f}%")
