@@ -3,6 +3,7 @@ import numpy as np
 import tensorflow as tf
 from PIL import Image
 import os
+<<<<<<< HEAD
 import gdown
 
 # --- CẤU HÌNH ---
@@ -60,10 +61,44 @@ if uploaded_file is not None and interpreter is not None:
     
     with st.spinner("Đang chạy AI phân tích..."):
         # Tiền xử lý ảnh (Resize về 224x224 cho đúng đầu vào mô hình)
+=======
+
+st.set_page_config(page_title="AI CHẨN ĐOÁN BỆNH CÂY TRỒNG BẰNG HÌNH ẢNH", layout="centered")
+
+# --- HÀM HỖ TRỢ ---
+@st.cache_resource
+def get_class_names():
+    path = "dataset"
+    if not os.path.exists(path): return []
+    folders = sorted([f for f in os.listdir(path) if os.path.isdir(os.path.join(path, f))])
+    return [name.replace('_', ' ').capitalize() for name in folders]
+
+@st.cache_resource
+def load_tflite_model():
+    interpreter = tf.lite.Interpreter(model_path="model_cay_trong_final.tflite")
+    interpreter.allocate_tensors()
+    return interpreter
+
+st.title("🌾 AI CHẨN ĐOÁN BỆNH CÂY TRỒNG BẰNG HÌNH ẢNH")
+interpreter = load_tflite_model()
+class_names = get_class_names()
+
+# --- CHỈ DÙNG 1 NÚT UPLOAD DUY NHẤT ---
+# Trên mobile, nút này tự hiện: Máy ảnh / Ảnh và video
+uploaded_file = st.file_uploader("📂 Nhấn để chụp hoặc chọn ảnh", type=["jpg", "jpeg", "png"])
+
+# XỬ LÝ ẢNH NGAY LẬP TỨC
+if uploaded_file is not None:
+    image = Image.open(uploaded_file)
+    st.image(image, use_column_width=True)
+    
+    with st.spinner("Đang phân tích..."):
+>>>>>>> de432b5cf6fe2863e7f1c6be17296fbc6b6ac986
         img = image.resize((224, 224))
         img_array = np.array(img, dtype=np.float32) / 255.0
         img_array = np.expand_dims(img_array, axis=0)
         
+<<<<<<< HEAD
         # Chạy mô hình TFLite
         input_details = interpreter.get_input_details()
         output_details = interpreter.get_output_details()
@@ -83,3 +118,16 @@ if uploaded_file is not None and interpreter is not None:
         st.info("⚠️ Lưu ý:CẦN ĐIỀU TRỊ SỚM ĐỂ GIÃM CHI PHÍ.")
         st.markdown("---")
         st.write("📞 **GỌI NGAY ĐỂ ĐUỌC ĐIỀU TRỊ: 0763114770**")
+=======
+        interpreter.set_tensor(interpreter.get_input_details()[0]['index'], img_array)
+        interpreter.invoke()
+        prediction = interpreter.get_tensor(interpreter.get_output_details()[0]['index'])
+        
+        idx = np.argmax(prediction)
+        
+        # Kết quả dứt khoát
+        st.success(f"Kết quả phân tích: **{class_names[idx]}**")
+        st.error("⚠️ Cần xử lý sớm để giãm chi phí!")
+        st.markdown("---")
+        st.write("📞 **Liên hệ 0763114770 để được tư vấn và điều trị ngay!**")
+>>>>>>> de432b5cf6fe2863e7f1c6be17296fbc6b6ac986
