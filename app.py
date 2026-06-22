@@ -5,46 +5,43 @@ from PIL import Image
 import os
 import gdown
 
-# Link Google Drive chứa file .tflite (Bạn đã có link này)
-MODEL_URL = 'https://drive.google.com/uc?id=17t789jiASVUHvEr3PXNo8WW2ARzP3Ijt'
+# Cấu hình Model
+MODEL_URL = 'https://drive.google.com/uc?id=YOUR_FILE_ID_HERE' # Nhớ thay ID của bạn vào đây
 MODEL_FILE = 'model_cay_trong_final.tflite'
 
-st.set_page_config(page_title="AI CHẨN ĐOÁN BỆNH CÂY TRỒNG", layout="centered")
+# Thiết lập giao diện với tiêu đề mới
+st.set_page_config(page_title="CHUẨN ĐOÁN BỆNH CÂY TRỒNG BẰNG HÌNH ẢNH", layout="centered")
 
-# Hàm tải model từ Drive nếu chưa có trong thư mục của Streamlit
 @st.cache_resource
 def load_tflite_model():
     if not os.path.exists(MODEL_FILE):
-        with st.spinner("Đang tải model từ Drive..."):
-            gdown.download(MODEL_URL, MODEL_FILE, quiet=False)
+        gdown.download(MODEL_URL, MODEL_FILE, quiet=False)
     interpreter = tf.lite.Interpreter(model_path=MODEL_FILE)
     interpreter.allocate_tensors()
     return interpreter
 
-# Hàm đọc nhãn từ file labels.txt do auto_update.bat đẩy lên
 @st.cache_resource
 def get_class_names():
     if os.path.exists("labels.txt"):
         with open("labels.txt", "r", encoding='utf-8') as f:
-            # Xử lý định dạng tên bệnh
             return [line.strip().replace('_', ' ').capitalize() for line in f.readlines()]
     return ["Chưa có dữ liệu nhãn"]
 
-st.title("🌾 AI CHẨN ĐOÁN BỆNH CÂY TRỒNG")
+# Hiển thị tiêu đề mới
+st.title("🌾CHUẨN ĐOÁN BỆNH CÂY TRỒNG BẰNG HÌNH ẢNH")
 interpreter = load_tflite_model()
 class_names = get_class_names()
 
 uploaded_file = st.file_uploader("📂 Chọn ảnh cây trồng", type=["jpg", "jpeg", "png"])
 
-if uploaded_file is not None and interpreter is not None:
+if uploaded_file is not None:
     image = Image.open(uploaded_file).convert('RGB')
     st.image(image, use_column_width=True)
     
-    # Xử lý ảnh để đưa vào model
+    # Xử lý ảnh
     img = image.resize((224, 224))
     img_array = np.expand_dims(np.array(img, dtype=np.float32) / 255.0, axis=0)
     
-    # Chạy dự đoán
     input_details = interpreter.get_input_details()
     output_details = interpreter.get_output_details()
     
@@ -52,8 +49,9 @@ if uploaded_file is not None and interpreter is not None:
     interpreter.invoke()
     prediction = interpreter.get_tensor(output_details[0]['index'])
     
-    # Hiển thị kết quả
+    # Hiển thị kết quả (đã bỏ phần else không xác định bệnh)
     idx = np.argmax(prediction)
     if idx < len(class_names):
-        st.success(f"Kết quả: **{class_names[idx]}**")
-    st.write("📞 Liên hệ hỗ trợ: 0763114770")
+        st.success(f"Kết quả dự đoán: **{class_names[idx]}**")
+        st.warning("⚠️ Cảnh báo: Điều trị ngay để giảm chi phí!")
+        st.info("📞 Liên hệ điều trị: 0763114770")
