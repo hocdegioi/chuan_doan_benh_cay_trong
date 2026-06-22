@@ -6,7 +6,7 @@ import os
 import gdown
 
 # Cấu hình Model
-MODEL_URL = 'https://drive.google.com/uc?id=YOUR_FILE_ID_HERE' # Nhớ thay ID của bạn vào đây
+MODEL_URL = 'https://drive.google.com/uc?id=17t789jiASVUHvEr3PXNo8WW2ARzP3Ijt' # Nhớ thay ID của bạn vào đây
 MODEL_FILE = 'model_cay_trong_final.tflite'
 
 # Thiết lập giao diện với tiêu đề mới
