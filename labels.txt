@@ -5,4 +5,4 @@ bo_tri
 dao_on_co_bong
 dao_on_la_lua
 lua_khoe
-sau_riêng_sach_bênh
+sau_riêng_sach_benh
