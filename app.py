@@ -53,5 +53,5 @@ if uploaded_file is not None:
     idx = np.argmax(prediction)
     if idx < len(class_names):
         st.success(f"Kết quả dự đoán: **{class_names[idx]}**")
-        st.warning("⚠️ Cảnh báo: Điều trị ngay để giảm chi phí!")
+        st.warning("⚠️ Cảnh báo: Điều trị ngay để giảm chi phí")
         st.info("📞 Liên hệ điều trị: 0763114770")
