@@ -8,7 +8,7 @@ DATASET_DIR = 'dataset'
 MODEL_H5 = 'model_benh_lua.h5'
 MODEL_TFLITE = 'model_benh_lua.tflite'
 LABELS_FILE = 'labels.txt'
-# Đường dẫn chính xác theo yêu cầu của bạn
+# Đường dẫn chính xác tới Google Drive
 DRIVE_DIR = 'G:/My Drive/File cây trồng'
 
 def train_and_sync():
@@ -51,13 +51,13 @@ def train_and_sync():
     print("-> Da tao xong file .h5 va .tflite")
 
     # --- 5. DONG BO LEN DRIVE ---
-    if not os.path.exists DRIVE_DIR = 'G:/My Drive/File cây trồng'
+    if not os.path.exists(DRIVE_DIR):
         print(f"-> Loi: Khong tim thay thu muc {DRIVE_DIR}. Vui long kiem tra Google Drive.")
     else:
         files_to_sync = [MODEL_H5, MODEL_TFLITE, LABELS_FILE]
         for file_name in files_to_sync:
             if os.path.exists(file_name):
-                shutil.copy2(file_name, os.path.join(DRIVE_DIR = 'G:/My Drive/File cây trồng'))
+                shutil.copy2(file_name, os.path.join(DRIVE_DIR, file_name))
                 print(f"-> Da day len Drive: {file_name}")
             else:
                 print(f"-> Canh bao: Khong tim thay file {file_name}")
