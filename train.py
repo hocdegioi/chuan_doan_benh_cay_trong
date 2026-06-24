@@ -57,7 +57,7 @@ def train_and_sync():
         files_to_sync = [MODEL_H5, MODEL_TFLITE, LABELS_FILE]
         for file_name in files_to_sync:
             if os.path.exists(file_name):
-                shutil.copy2(file_name, os.path.join(DRIVE_DIR, file_name))
+                shutil.copy2(file_name, os.path.join(DRIVE_DIR = 'G:/My Drive/File cây trồng'))
                 print(f"-> Da day len Drive: {file_name}")
             else:
                 print(f"-> Canh bao: Khong tim thay file {file_name}")
