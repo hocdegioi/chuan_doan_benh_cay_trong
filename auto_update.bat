@@ -1,25 +1,24 @@
 @echo off
-echo --- BAT DAU DONG BO "SACH" VA CUONG BUC DONG BO ---
+echo --- BAT DAU DONG BO APP.PY LEN GITHUB ---
 
-:: 1. Cập nhật lịch sử mới nhất từ GitHub về
+:: 1. Cập nhật mới nhất từ GitHub về để tránh lỗi "rejected"
 git pull origin main --rebase
 
-:: 2. Xóa sạch cache để Git quên các file nặng (dataset, .tflite, .h5...)
+:: 2. Loại bỏ tất cả file đang bị Git theo dõi khỏi cache (không xóa file thật)
+:: Điều này giúp "quên" các file nặng lỡ add trước đó
 git rm -r --cached .
 
-:: 3. Chỉ thêm lại các file mã nguồn (TUYỆT ĐỐI KHÔNG add thư mục dataset)
-git add app.py
-git add labels.txt
-git add train.py
+:: 3. Thêm lại file .gitignore để đảm bảo các file nặng bị chặn vĩnh viễn
 git add .gitignore
+
+:: 4. Chỉ thêm đúng file app.py (và các file code nhẹ khác nếu bạn muốn)
+git add app.py
+git add train.py
 git add auto_update.bat
 
-:: 4. Commit thay đổi
-git commit -m "Cleanup: Xoa bo file nang, chi giu code"
-
-:: 5. Ép buộc đẩy lên GitHub để ghi đè lịch sử (Sửa lỗi rejected)
-git push origin main --force
+:: 5. Commit và Đẩy lên GitHub
+git commit -m "Update source code: app.py"
+git push origin main
 
 echo --- DONG BO HOAN TAT! ---
-echo --- Kiem tra lai tren GitHub web, neu con file nang hay xoa thu cong lan cuoi. ---
 pause
