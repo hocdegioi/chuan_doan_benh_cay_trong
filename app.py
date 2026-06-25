@@ -6,9 +6,9 @@ import os
 import gdown
 
 # --- CẤU HÌNH ---
-# ID mô hình và nhãn lấy từ Google Drive của bạn
-MODEL_ID = '17t789jiASVUHvEr3PXNo8WW2ARzP3Ijt' 
-LABELS_ID = '1pqDxx2pEpBj96t6rNypU4wdNAuYSj0Rx' # Đã cập nhật ID từ link bạn cung cấp
+# Cập nhật ID mới từ link Google Drive bạn cung cấp
+MODEL_ID = '1j_j9tOrCb1Huw7wijks259bsj0QtF2k3' 
+LABELS_ID = '1JRoe_BnwrEVbI4sOxtVYgM7nIAeGNLKi' 
 
 MODEL_FILE = 'model_cay_trong_final.tflite'
 LABELS_FILE = 'labels.txt'
@@ -28,15 +28,18 @@ def download_files_from_drive():
             st.info("Đang tải dữ liệu nhãn...")
             gdown.download(f'https://drive.google.com/uc?id={LABELS_ID}', LABELS_FILE, quiet=False)
     except Exception as e:
-        st.error(f"Lỗi khi tải dữ liệu: {e}")
+        st.error(f"Lỗi khi tải dữ liệu từ Drive: {e}")
 
 @st.cache_resource
 def load_tflite_model():
     download_files_from_drive()
     if os.path.exists(MODEL_FILE):
-        interpreter = tf.lite.Interpreter(model_path=MODEL_FILE)
-        interpreter.allocate_tensors()
-        return interpreter
+        try:
+            interpreter = tf.lite.Interpreter(model_path=MODEL_FILE)
+            interpreter.allocate_tensors()
+            return interpreter
+        except Exception as e:
+            st.error(f"Lỗi khi khởi tạo mô hình TFLite: {e}")
     return None
 
 @st.cache_resource
@@ -48,14 +51,14 @@ def get_class_names():
     return ["Chưa có dữ liệu nhãn"]
 
 # --- GIAO DIỆN STREAMLIT ---
-st.set_page_config(page_title="CHUẨN ĐOÁN BỆNH CÂY TRỒNG", layout="centered")
-st.title("🌾 CHUẨN ĐOÁN BỆNH CÂY TRỒNG")
+st.set_page_config(page_title="CHẨN ĐOÁN BỆNH CÂY TRỒNG", layout="centered")
+st.title("🌾 CHẨN ĐOÁN BỆNH CÂY TRỒNG")
 
 interpreter = load_tflite_model()
 class_names = get_class_names()
 
 if interpreter is None:
-    st.error("Không thể tải mô hình. Vui lòng kiểm tra lại ID Drive hoặc kết nối mạng.")
+    st.error("Không thể tải mô hình. Vui lòng kiểm tra lại quyền chia sẻ link Drive (bật chế độ 'Bất kỳ ai có liên kết đều có thể xem') hoặc kết nối mạng.")
 else:
     uploaded_file = st.file_uploader("📂 Chọn ảnh cây trồng", type=["jpg", "jpeg", "png"])
 
