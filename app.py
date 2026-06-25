@@ -8,44 +8,30 @@ import gdown
 # --- CẤU HÌNH ---
 MODEL_ID = '1j_j9tOrCb1Huw7wijks259bsj0QtF2k3' 
 LABELS_ID = '1JRoe_BnwrEVbI4sOxtVYgM7nIAeGNLKi'
-
 MODEL_FILE = 'model_light.onnx'
 LABELS_FILE = 'labels.txt'
 
 # --- HÀM TẢI DỮ LIỆU ---
 @st.cache_resource
 def download_files_from_drive():
-    """Tải file từ Drive và kiểm tra sự tồn tại của file."""
-    files_to_download = {
-        MODEL_FILE: MODEL_ID,
-        LABELS_FILE: LABELS_ID
-    }
-    
+    files_to_download = {MODEL_FILE: MODEL_ID, LABELS_FILE: LABELS_ID}
     for filename, file_id in files_to_download.items():
         if not os.path.exists(filename):
             url = f'https://drive.google.com/uc?id={file_id}'
-            try:
-                gdown.download(url, filename, quiet=False, fuzzy=True)
-            except Exception as e:
-                st.error(f"Lỗi tải file {filename}: {e}")
+            gdown.download(url, filename, quiet=False, fuzzy=True)
 
 @st.cache_resource
 def load_onnx_model():
-    """Tải và khởi tạo mô hình ONNX với provider CPU."""
     download_files_from_drive()
-    # TỐI ƯU: Import ở đây để tránh lỗi ImportError lúc khởi động
+    # LAZY IMPORT: Chỉ import khi cần dùng để tránh lỗi crash lúc khởi động
     import onnxruntime as ort 
     
     if os.path.exists(MODEL_FILE):
         try:
-            # Kiểm tra kích thước file để đảm bảo đã tải thành công
             if os.path.getsize(MODEL_FILE) > 1000:
-                # Chỉ định rõ CPU để tránh lỗi khi không tìm thấy GPU
                 return ort.InferenceSession(MODEL_FILE, providers=['CPUExecutionProvider'])
-            else:
-                st.error("File mô hình bị hỏng.")
         except Exception as e:
-            st.error(f"Lỗi khởi tạo ONNX: {e}")
+            st.error(f"Lỗi khởi tạo mô hình: {e}")
     return None
 
 @st.cache_resource
@@ -56,7 +42,7 @@ def get_class_names():
             return [line.strip().replace('_', ' ').capitalize() for line in f.readlines()]
     return ["Chưa tải được nhãn"]
 
-# --- GIAO DIỆN STREAMLIT ---
+# --- GIAO DIỆN ---
 st.set_page_config(page_title="CHẨN ĐOÁN BỆNH CÂY TRỒNG", layout="centered")
 st.title("🌾 CHẨN ĐOÁN BỆNH CÂY TRỒNG")
 
@@ -64,31 +50,26 @@ session = load_onnx_model()
 class_names = get_class_names()
 
 if session is None:
-    st.warning("Đang tải dữ liệu từ Drive... Vui lòng đợi hoặc kiểm tra Logs nếu lỗi.")
+    st.warning("Đang tải dữ liệu... Vui lòng đợi.")
 else:
     uploaded_file = st.file_uploader("📂 Chọn ảnh cây trồng", type=["jpg", "jpeg", "png"])
-
     if uploaded_file is not None:
         image = Image.open(uploaded_file).convert('RGB')
         st.image(image, use_column_width=True)
         
-        # --- TIỀN XỬ LÝ ẢNH ---
         img = np.array(image)
-        img = cv2.resize(img, (224, 224))
-        img = img.astype(np.float32) / 255.0
-        img = np.transpose(img, (2, 0, 1)) # (C, H, W)
-        img = np.expand_dims(img, axis=0)  # (1, 3, 224, 224)
+        img = cv2.resize(img, (224, 224)).astype(np.float32) / 255.0
+        img = np.transpose(img, (2, 0, 1))[np.newaxis, ...]
         
-        # --- CHẠY DỰ ĐOÁN ---
         try:
             input_name = session.get_inputs()[0].name
             outputs = session.run(None, {input_name: img})
             idx = np.argmax(outputs[0])
             
-            # --- HIỂN THỊ KẾT QUẢ (GIỮ NGUYÊN NHƯ BẢN CŨ) ---
+            # --- PHẦN KẾT QUẢ GIỮ NGUYÊN NHƯ BẢN CŨ ---
             if idx < len(class_names):
                 st.success(f"Kết quả dự đoán: **{class_names[idx]}**")
                 st.warning("⚠️ Cảnh báo: Điều trị ngay để giảm chi phí.")
                 st.info("📞 Liên hệ điều trị: 0763114770")
         except Exception as e:
-            st.error(f"Lỗi khi dự đoán: {e}")
+            st.error(f"Lỗi dự đoán: {e}")
