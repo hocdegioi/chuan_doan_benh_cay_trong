@@ -1,5 +1,6 @@
 import streamlit as st
 import numpy as np
+import onnxruntime as ort
 import cv2
 from PIL import Image
 import os
@@ -11,8 +12,7 @@ LABELS_ID = '1JRoe_BnwrEVbI4sOxtVYgM7nIAeGNLKi'
 MODEL_FILE = 'model_light.onnx'
 LABELS_FILE = 'labels.txt'
 
-# --- HÀM TẢI DỮ LIỆU ---
-@st.cache_resource
+# --- HÀM TẢI DỮ LIỆU (Tách rời hoàn toàn) ---
 def download_files_from_drive():
     files_to_download = {MODEL_FILE: MODEL_ID, LABELS_FILE: LABELS_ID}
     for filename, file_id in files_to_download.items():
@@ -20,21 +20,19 @@ def download_files_from_drive():
             url = f'https://drive.google.com/uc?id={file_id}'
             gdown.download(url, filename, quiet=False, fuzzy=True)
 
+# --- KHỞI TẠO MÔ HÌNH (Chỉ cache hàm này) ---
 @st.cache_resource
 def load_onnx_model():
-    download_files_from_drive()
-    # LAZY IMPORT: Chỉ import khi cần dùng để tránh lỗi crash lúc khởi động
-    import onnxruntime as ort 
-    
+    download_files_from_drive() # Gọi trực tiếp, không qua cache
     if os.path.exists(MODEL_FILE):
         try:
-            if os.path.getsize(MODEL_FILE) > 1000:
+            if os.path.getsize(MODEL_FILE) > 100000:
                 return ort.InferenceSession(MODEL_FILE, providers=['CPUExecutionProvider'])
         except Exception as e:
             st.error(f"Lỗi khởi tạo mô hình: {e}")
     return None
 
-@st.cache_resource
+@st.cache_data # Dùng cache_data cho văn bản
 def get_class_names():
     download_files_from_drive()
     if os.path.exists(LABELS_FILE):
@@ -65,8 +63,6 @@ else:
             input_name = session.get_inputs()[0].name
             outputs = session.run(None, {input_name: img})
             idx = np.argmax(outputs[0])
-            
-            # --- PHẦN KẾT QUẢ GIỮ NGUYÊN NHƯ BẢN CŨ ---
             if idx < len(class_names):
                 st.success(f"Kết quả dự đoán: **{class_names[idx]}**")
                 st.warning("⚠️ Cảnh báo: Điều trị ngay để giảm chi phí.")

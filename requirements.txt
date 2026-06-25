@@ -1,6 +1,6 @@
-streamlit
-numpy
-onnxruntime
-opencv-python-headless
-Pillow
-gdown
+streamlit==1.25.0
+numpy==1.23.5
+onnxruntime==1.16.3
+opencv-python-headless==4.8.0.76
+Pillow==9.5.0
+gdown==4.7.1
