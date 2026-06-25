@@ -7,7 +7,6 @@ import os
 import gdown
 
 # --- CẤU HÌNH ---
-# Sử dụng ID chính xác từ link bạn cung cấp
 MODEL_ID = '1j_j9tOrCb1Huw7wijks259bsj0QtF2k3' 
 LABELS_ID = '1JRoe_BnwrEVbI4sOxtVYgM7nIAeGNLKi'
 
@@ -27,23 +26,24 @@ def download_files_from_drive():
         if not os.path.exists(filename):
             url = f'https://drive.google.com/uc?id={file_id}'
             try:
-                # Sử dụng gdown để tải
                 gdown.download(url, filename, quiet=False, fuzzy=True)
             except Exception as e:
                 st.error(f"Lỗi tải file {filename}: {e}")
 
 @st.cache_resource
 def load_onnx_model():
+    """Tải và khởi tạo mô hình ONNX với provider CPU."""
     download_files_from_drive()
     if os.path.exists(MODEL_FILE):
         try:
-            # Kiểm tra kích thước file để đảm bảo đã tải thành công
-            if os.path.getsize(MODEL_FILE) > 1000:
-                return ort.InferenceSession(MODEL_FILE)
+            # Kiểm tra file hợp lệ (kích thước lớn hơn 100KB) để tránh lỗi file rác
+            if os.path.getsize(MODEL_FILE) > 100000:
+                # Chỉ định rõ CPU để tránh lỗi Runtime (tìm kiếm GPU)
+                return ort.InferenceSession(MODEL_FILE, providers=['CPUExecutionProvider'])
             else:
-                st.error("File mô hình bị hỏng hoặc chưa tải xong.")
+                st.error("Mô hình không hợp lệ (file quá nhỏ).")
         except Exception as e:
-            st.error(f"Lỗi khởi tạo ONNX Runtime: {e}")
+            st.error(f"Lỗi khởi tạo ONNX Session: {e}")
     return None
 
 @st.cache_resource
@@ -58,7 +58,6 @@ def get_class_names():
 st.set_page_config(page_title="CHẨN ĐOÁN BỆNH CÂY TRỒNG", layout="centered")
 st.title("🌾 CHẨN ĐOÁN BỆNH CÂY TRỒNG")
 
-# Load session và labels
 session = load_onnx_model()
 class_names = get_class_names()
 
@@ -79,12 +78,15 @@ else:
         img = np.expand_dims(img, axis=0)  # (1, 3, 224, 224)
         
         # --- CHẠY DỰ ĐOÁN ---
-        input_name = session.get_inputs()[0].name
-        outputs = session.run(None, {input_name: img})
-        idx = np.argmax(outputs[0])
-        
-        # --- HIỂN THỊ KẾT QUẢ ---
-        if idx < len(class_names):
-            st.success(f"Kết quả dự đoán: **{class_names[idx]}**")
-            st.warning("⚠️ Cảnh báo: Điều trị ngay để giảm chi phí.")
-            st.info("📞 Liên hệ điều trị: 0763114770")
+        try:
+            input_name = session.get_inputs()[0].name
+            outputs = session.run(None, {input_name: img})
+            idx = np.argmax(outputs[0])
+            
+            # --- HIỂN THỊ KẾT QUẢ ---
+            if idx < len(class_names):
+                st.success(f"Kết quả dự đoán: **{class_names[idx]}**")
+                st.warning("⚠️ Cảnh báo: Điều trị ngay để giảm chi phí.")
+                st.info("📞 Liên hệ điều trị: 0763114770")
+        except Exception as e:
+            st.error(f"Lỗi khi dự đoán: {e}")
