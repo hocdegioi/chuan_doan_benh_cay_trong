@@ -1,6 +1,6 @@
 streamlit
 numpy
-onnxruntime-cpu
+onnxruntime
 opencv-python-headless
 Pillow
 gdown

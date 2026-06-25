@@ -12,31 +12,25 @@ MODEL_FILE = 'model_light.onnx'
 LABELS_FILE = 'labels.txt'
 
 # --- HÀM TẢI DỮ LIỆU ---
+@st.cache_resource
 def download_files_from_drive():
-    files_to_download = {MODEL_FILE: MODEL_ID, LABELS_FILE: LABELS_ID}
-    for filename, file_id in files_to_download.items():
+    files = {MODEL_FILE: MODEL_ID, LABELS_FILE: LABELS_ID}
+    for filename, file_id in files.items():
         if not os.path.exists(filename):
             url = f'https://drive.google.com/uc?id={file_id}'
-            try:
-                gdown.download(url, filename, quiet=False, fuzzy=True)
-            except Exception as e:
-                st.error(f"Lỗi tải file {filename}: {e}")
+            gdown.download(url, filename, quiet=False, fuzzy=True)
 
-# --- KHỞI TẠO MÔ HÌNH ---
 @st.cache_resource
 def load_onnx_model():
     download_files_from_drive()
-    # LAZY IMPORT: Giải quyết lỗi ImportError/Traceback
+    # LAZY IMPORT: Chỉ import ở đây để tránh crash app ngay từ dòng đầu
     import onnxruntime as ort 
     
     if os.path.exists(MODEL_FILE):
         try:
-            if os.path.getsize(MODEL_FILE) > 100000:
-                return ort.InferenceSession(MODEL_FILE, providers=['CPUExecutionProvider'])
-            else:
-                st.error("Mô hình bị hỏng (file quá nhỏ).")
+            return ort.InferenceSession(MODEL_FILE, providers=['CPUExecutionProvider'])
         except Exception as e:
-            st.error(f"Lỗi khởi tạo mô hình: {e}")
+            st.error(f"Lỗi khởi tạo ONNX: {e}")
     return None
 
 @st.cache_data
