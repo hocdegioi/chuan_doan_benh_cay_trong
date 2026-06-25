@@ -5,70 +5,46 @@ from PIL import Image
 import os
 import gdown
 
-# --- CẤU HÌNH ---
 MODEL_ID = '1j_j9tOrCb1Huw7wijks259bsj0QtF2k3' 
 LABELS_ID = '1JRoe_BnwrEVbI4sOxtVYgM7nIAeGNLKi'
 MODEL_FILE = 'model_light.onnx'
 LABELS_FILE = 'labels.txt'
 
-# --- HÀM TẢI DỮ LIỆU ---
-@st.cache_resource
 def download_files_from_drive():
     files = {MODEL_FILE: MODEL_ID, LABELS_FILE: LABELS_ID}
     for filename, file_id in files.items():
         if not os.path.exists(filename):
-            url = f'https://drive.google.com/uc?id={file_id}'
-            gdown.download(url, filename, quiet=False, fuzzy=True)
+            gdown.download(f'https://drive.google.com/uc?id={file_id}', filename, quiet=False, fuzzy=True)
 
 @st.cache_resource
 def load_onnx_model():
     download_files_from_drive()
-    # LAZY IMPORT: Chỉ import ở đây để tránh crash app ngay từ dòng đầu
     import onnxruntime as ort 
-    
     if os.path.exists(MODEL_FILE):
-        try:
-            return ort.InferenceSession(MODEL_FILE, providers=['CPUExecutionProvider'])
-        except Exception as e:
-            st.error(f"Lỗi khởi tạo ONNX: {e}")
+        return ort.InferenceSession(MODEL_FILE, providers=['CPUExecutionProvider'])
     return None
 
 @st.cache_data
 def get_class_names():
     download_files_from_drive()
-    if os.path.exists(LABELS_FILE):
-        with open(LABELS_FILE, "r", encoding='utf-8') as f:
-            return [line.strip().replace('_', ' ').capitalize() for line in f.readlines()]
-    return ["Chưa tải được nhãn"]
+    with open(LABELS_FILE, "r", encoding='utf-8') as f:
+        return [line.strip().replace('_', ' ').capitalize() for line in f.readlines()]
 
-# --- GIAO DIỆN ---
-st.set_page_config(page_title="CHẨN ĐOÁN BỆNH CÂY TRỒNG", layout="centered")
 st.title("🌾 CHẨN ĐOÁN BỆNH CÂY TRỒNG")
-
 session = load_onnx_model()
 class_names = get_class_names()
 
-if session is None:
-    st.warning("Đang tải dữ liệu... Vui lòng đợi.")
-else:
-    uploaded_file = st.file_uploader("📂 Chọn ảnh cây trồng", type=["jpg", "jpeg", "png"])
-    if uploaded_file is not None:
+if session:
+    uploaded_file = st.file_uploader("📂 Chọn ảnh", type=["jpg", "png"])
+    if uploaded_file:
         image = Image.open(uploaded_file).convert('RGB')
-        st.image(image, use_column_width=True)
-        
-        # Tiền xử lý
-        img = np.array(image)
-        img = cv2.resize(img, (224, 224)).astype(np.float32) / 255.0
+        img = cv2.resize(np.array(image), (224, 224)).astype(np.float32) / 255.0
         img = np.transpose(img, (2, 0, 1))[np.newaxis, ...]
         
-        try:
-            input_name = session.get_inputs()[0].name
-            outputs = session.run(None, {input_name: img})
-            idx = np.argmax(outputs[0])
-            
-            if idx < len(class_names):
-                st.success(f"Kết quả dự đoán: **{class_names[idx]}**")
-                st.warning("⚠️ Cảnh báo: Điều trị ngay để giảm chi phí.")
-                st.info("📞 Liên hệ điều trị: 0763114770")
-        except Exception as e:
-            st.error(f"Lỗi dự đoán: {e}")
+        input_name = session.get_inputs()[0].name
+        res = session.run(None, {input_name: img})[0]
+        idx = np.argmax(res)
+        
+        st.success(f"Kết quả: **{class_names[idx]}**")
+        st.warning("⚠️ Cảnh báo: Điều trị ngay.")
+        st.info("📞 Liên hệ: 0763114770")
