@@ -1,6 +1,5 @@
 import streamlit as st
 import numpy as np
-import onnxruntime as ort
 import cv2
 from PIL import Image
 import os
@@ -34,16 +33,19 @@ def download_files_from_drive():
 def load_onnx_model():
     """Tải và khởi tạo mô hình ONNX với provider CPU."""
     download_files_from_drive()
+    # TỐI ƯU: Import ở đây để tránh lỗi ImportError lúc khởi động
+    import onnxruntime as ort 
+    
     if os.path.exists(MODEL_FILE):
         try:
-            # Kiểm tra file hợp lệ (kích thước lớn hơn 100KB) để tránh lỗi file rác
-            if os.path.getsize(MODEL_FILE) > 100000:
-                # Chỉ định rõ CPU để tránh lỗi Runtime (tìm kiếm GPU)
+            # Kiểm tra kích thước file để đảm bảo đã tải thành công
+            if os.path.getsize(MODEL_FILE) > 1000:
+                # Chỉ định rõ CPU để tránh lỗi khi không tìm thấy GPU
                 return ort.InferenceSession(MODEL_FILE, providers=['CPUExecutionProvider'])
             else:
-                st.error("Mô hình không hợp lệ (file quá nhỏ).")
+                st.error("File mô hình bị hỏng.")
         except Exception as e:
-            st.error(f"Lỗi khởi tạo ONNX Session: {e}")
+            st.error(f"Lỗi khởi tạo ONNX: {e}")
     return None
 
 @st.cache_resource
@@ -83,7 +85,7 @@ else:
             outputs = session.run(None, {input_name: img})
             idx = np.argmax(outputs[0])
             
-            # --- HIỂN THỊ KẾT QUẢ ---
+            # --- HIỂN THỊ KẾT QUẢ (GIỮ NGUYÊN NHƯ BẢN CŨ) ---
             if idx < len(class_names):
                 st.success(f"Kết quả dự đoán: **{class_names[idx]}**")
                 st.warning("⚠️ Cảnh báo: Điều trị ngay để giảm chi phí.")
