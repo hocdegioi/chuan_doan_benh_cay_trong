@@ -37,44 +37,36 @@ def get_class_names():
     return ["Lỗi tải nhãn"]
 
 # --- GIAO DIỆN ---
-st.set_page_config(page_title="CHẨN ĐOÁN BỆNH CÂY TRỒNG", layout="centered")
-st.title("🌾 CHẨN ĐOÁN BỆNH CÂY TRỒNG BẰNG HÌNH ẢNH")
+st.set_page_config(page_title="CHUẨN ĐOÁN BỆNH CÂY TRỒNG BẰNG HÌNH ẢNH")
+st.title("🌾 CHUẨN ĐOÁN BỆNH CÂY TRỒNG BẰNG HÌNH ẢNH")
 
 session = load_onnx_model()
 class_names = get_class_names()
 
-# --- TÍCH HỢP CHỤP ẢNH VÀ TẢI ẢNH ---
-tab1, tab2 = st.tabs(["📂 Tải ảnh lên", "📸 Chụp ảnh trực tiếp"])
+# Sử dụng duy nhất một file_uploader
+# Trên mobile, nó sẽ tự bật option chụp ảnh camera
+uploaded_file = st.file_uploader("Chọn ảnh từ thư viện hoặc Chụp ảnh trực tiếp", type=["jpg", "jpeg", "png"])
 
-image_to_process = None
-
-with tab1:
-    uploaded_file = st.file_uploader("Chọn ảnh từ máy", type=["jpg", "jpeg", "png"])
-    if uploaded_file:
-        image_to_process = Image.open(uploaded_file)
-
-with tab2:
-    camera_file = st.camera_input("Chụp ảnh cây trồng")
-    if camera_file:
-        image_to_process = Image.open(camera_file)
-
-# --- XỬ LÝ DỰ ĐOÁN ---
-if image_to_process is not None:
-    st.image(image_to_process, caption="Ảnh đang kiểm tra", use_column_width=True)
+if uploaded_file is not None:
+    image = Image.open(uploaded_file).convert('RGB')
+    st.image(image, caption="Ảnh đã chọn", use_column_width=True)
     
-    img = image_to_process.convert('RGB')
-    img = np.array(img)
+    # Tiền xử lý
+    img = np.array(image)
     img = cv2.resize(img, (224, 224)).astype(np.float32) / 255.0
     img = np.transpose(img, (2, 0, 1))
     img = np.expand_dims(img, axis=0)
     
     if session:
-        input_name = session.get_inputs()[0].name
-        outputs = session.run(None, {input_name: img})
-        idx = np.argmax(outputs[0])
-        
-        st.success(f"Kết quả dự đoán: **{class_names[idx]}**")
-        st.warning("⚠️ Cảnh báo: Điều trị sớm để giảm chi phí.") # Dòng yêu cầu mới
-        st.info("📞 Liên hệ hỗ trợ điều trị: 0763114770")
+        try:
+            input_name = session.get_inputs()[0].name
+            outputs = session.run(None, {input_name: img})
+            idx = np.argmax(outputs[0])
+            
+            st.success(f"Kết quả dự đoán: **{class_names[idx]}**")
+            st.warning("⚠️ Cảnh báo: Điều trị sớm để giảm chi phí.")
+            st.info("📞 Liên hệ hỗ trợ điều trị: 0763114770")
+        except Exception as e:
+            st.error(f"Lỗi dự đoán: {e}")
     else:
-        st.error("Mô hình chưa được nạp!")
+        st.error("Mô hình không được nạp!")
