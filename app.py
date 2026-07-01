@@ -18,7 +18,7 @@ def download_files():
     for filename, file_id in FILE_IDS.items():
         if not os.path.exists(filename):
             url = f'https://drive.google.com/uc?export=download&id={file_id}'
-            gdown.download(url, filename, quiet=False, fuzzy=True)
+            gdown.download(url, filename, quiet=False,)
 
 @st.cache_resource
 def load_session():
