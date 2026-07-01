@@ -59,9 +59,21 @@ if uploaded_file:
     img = np.transpose(img, (2, 0, 1)) 
     img = np.expand_dims(img, axis=0)
     
-    # Dự đoán (Đã sửa: Tự động lấy input_name thay vì gán cứng)
+    # --- PHẦN DỰ ĐOÁN
+    
+    # 1. Tự động lấy tên input từ mô hình (đã làm)
     input_name = session.get_inputs()[0].name
+    
+    # 2. DEBUG: In ra cấu trúc mô hình mong muốn so với cấu trúc thực tế
+    input_shape = session.get_inputs()[0].shape
+    if list(img.shape) != input_shape:
+        st.error(f"Lỗi: Mô hình cần shape {input_shape} nhưng ảnh bạn đang gửi là {list(img.shape)}.")
+        st.stop()
+    
+    # 3. Chạy dự đoán
     outputs = session.run(None, {input_name: img})[0][0]
+    
+    # --- HẾT PHẦN DỰ ĐOÁN ---
     
     # Tính xác suất (Giữ nguyên logic của bạn)
     probs = np.exp(outputs) / np.sum(np.exp(outputs))
