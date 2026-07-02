@@ -31,48 +31,42 @@ def load_labels():
         return [line.strip().replace('_', ' ').capitalize() for line in f.readlines()]
 
 # --- GIAO DIỆN ---
-st.set_page_config(page_title="CHUẨN ĐOÁN BỆNH CÂY TRỒNG BẰNG HÌNH ẢNH")
-st.title("🌾 CHUẨN ĐOÁN BỆNH CÂY TRỒNG BẰNG HÌNH ẢNH")
+st.set_page_config(page_title="CHUẨN ĐOÁN BỆNH CÂY TRỒNG")
+st.title("🌾 CHUẨN ĐOÁN BỆNH CÂY TRỒNG")
 
 try:
     session = load_session()
     labels = load_labels()
 except Exception as e:
-    st.error(f"Lỗi tải dữ liệu: {e}")
+    st.error(f"Lỗi tải file: {e}")
     st.stop()
 
-uploaded_file = st.file_uploader("Chọn ảnh...", type=["jpg", "jpeg", "png"])
+uploaded_file = st.file_uploader("Chọn ảnh bệnh cây trồng...", type=["jpg", "jpeg", "png"])
 
 if uploaded_file:
     image = Image.open(uploaded_file).convert('RGB')
     st.image(image, use_column_width=True)
     
-    # Tiền xử lý
+    # 1. Tiền xử lý chuẩn (Resize + Normalize)
     img = np.array(image)
     img = cv2.resize(img, (224, 224)).astype(np.float32) / 255.0
-    img = (img - np.array([0.485, 0.456, 0.406])) / np.array([0.229, 0.224, 0.225])
+    img = (img - np.array([0.485, 0.456, 0.406], dtype=np.float32)) / np.array([0.229, 0.224, 0.225], dtype=np.float32)
     
-    # ĐOẠN SỬA QUAN TRỌNG: 
-    # Kiểm tra shape mô hình cần gì để tự xoay trục cho khớp
-    input_meta = session.get_inputs()[0]
-    required_shape = input_meta.shape # VD: [1, 3, 224, 224] hoặc [1, 224, 224, 3]
+    # 2. Chuyển từ (224, 224, 3) sang (3, 224, 224)
+    img = img.transpose((2, 0, 1))
     
-    # Nếu mô hình cần kênh màu ở trục 1 (NCHW)
-    if required_shape[1] == 3 and img.shape[2] == 3:
-        img = np.transpose(img, (2, 0, 1))
+    # 3. Thêm batch dimension (1, 3, 224, 224)
+    img = np.expand_dims(img, axis=0)
     
-    img = np.expand_dims(img, axis=0) # Thêm batch size: (1, 3, 224, 224)
-    
-    # Dự đoán
-    input_name = input_meta.name
+    # 4. Dự đoán (Sử dụng input name từ session)
+    input_name = session.get_inputs()[0].name
     outputs = session.run(None, {input_name: img})[0][0]
     
-    # Tính xác suất
+    # 5. Xử lý kết quả
     probs = np.exp(outputs - np.max(outputs)) / np.sum(np.exp(outputs - np.max(outputs)))
     idx = np.argmax(probs)
     
-    # Kết quả
-    if probs[idx] > 0.5: # Giảm ngưỡng để dễ hiện kết quả hơn
+    if probs[idx] > 0.5:
         st.success(f"Kết quả dự đoán: **{labels[idx]}**")
         st.warning("⚠️ Cảnh báo: Điều trị sớm để giảm chi phí.")
         st.info("📞 Liên hệ điều trị ngay: 0763114770")
